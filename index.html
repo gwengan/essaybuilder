@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Essay Planner</title>
+
+<script>
+/* =====================================================================
+   ✏️  EDIT THIS PART  ✏️
+   Change the words between the quote marks "like this".
+   - Each section in "sections" is one bubble on the mind map.
+   - To add a bubble, copy one whole { ... }, block (including the comma)
+     and paste it where you want it. To remove one, delete its block.
+   - Bubbles appear in the essay in the order they're listed here.
+   - hints    = reminders of what happened (shown as a list)
+   - starters = sentence beginnings she can click to insert
+   - words    = word bank she can click to insert
+   ===================================================================== */
+const ESSAY = {
+  title: "My School Holidays",
+  centre: "Cadet Camp",
+  instructions: "Click a bubble to start. Write one or two sentences for each bubble, then press “Put my essay together”.",
+  minWords: 50,
+  maxWords: 100,
+
+  sections: [
+    {
+      id: "intro",
+      emoji: "🏕️",
+      label: "Where did I go?",
+      question: "Where did you go in the school holidays, and who did you go with?",
+      hints: ["I went on a camp", "I went with cadets"],
+      starters: ["In the school holidays, I went to", "These holidays I went on a camp with"],
+      words: ["cadets", "camp", "holidays", "excited", "nervous"]
+    },
+    {
+      id: "weather",
+      emoji: "🌦️",
+      label: "The weather",
+      question: "What was the weather like at camp?",
+      hints: ["The first day was hot", "The next day was cold and rainy", "The weather kept changing"],
+      starters: ["On the first day it was", "The next day it was", "The weather kept changing between"],
+      words: ["hot", "sunny", "cold", "rainy", "wet", "changing"]
+    },
+    {
+      id: "activities",
+      emoji: "🚣",
+      label: "What we did",
+      question: "What activities did you do at camp?",
+      hints: ["Indoor water obstacle course", "Paddling to the lake and back", "Visited a plane museum", "Went to Newcastle near the beach"],
+      starters: ["We did lots of activities like", "First we", "We also visited"],
+      words: ["obstacle course", "paddled", "lake", "museum", "planes", "beach"]
+    },
+    {
+      id: "favourite",
+      emoji: "⭐",
+      label: "Favourite part",
+      question: "What was your favourite part, and why?",
+      hints: ["Going to Newcastle", "It was my first time there", "We went near the beach"],
+      starters: ["My favourite part was", "It was my first time", "I liked it because"],
+      words: ["Newcastle", "beach", "first time", "amazing", "beautiful"]
+    },
+    {
+      id: "competition",
+      emoji: "🏅",
+      label: "The competition",
+      question: "How did the competition go, and how did you feel?",
+      hints: ["We came 4th", "How did it make you feel?", "What would you do next time?"],
+      starters: ["We also had a competition and we came", "I felt", "Next time I want to"],
+      words: ["fourth", "disappointed", "team", "tried our best", "next time"]
+    },
+    {
+      id: "ending",
+      emoji: "🎒",
+      label: "The ending",
+      question: "How would you sum up the camp? Would you go again?",
+      hints: ["Did you enjoy it overall?", "Would you go again?"],
+      starters: ["Overall, the camp was", "I would love to go again because"],
+      words: ["fun", "tired", "proud", "again", "great experience"]
+    }
+  ]
+};
+/* =====================================================================
+   END OF THE PART TO EDIT
+   ===================================================================== */
+</script>
+
+<style>
+  :root {
+    --ink: #2b2d42;
+    --soft: #6b7080;
+    --bg: #f6f8fc;
+    --card: #ffffff;
+    --good: #2a9d5c;
+    --warn: #e08a1e;
+    --bad: #d64545;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Verdana, "Segoe UI", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  #app { max-width: 900px; margin: 0 auto; padding: 20px 16px 60px; }
+  header { text-align: center; }
+  h1 { margin: 6px 0 4px; font-size: 2rem; }
+  #instructions { color: var(--soft); margin: 0 0 10px; }
+
+  /* Mind map */
+  #map { position: relative; height: 460px; margin: 10px 0 20px; }
+  #lines { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #lines line { stroke: #c9cfdd; stroke-width: 0.6; stroke-dasharray: 1.5 1; }
+  #centre {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 150px; height: 150px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    background: linear-gradient(135deg, #4f6df5, #8a5cf6);
+    color: #fff; font-weight: bold; font-size: 1.15rem; padding: 14px;
+    box-shadow: 0 6px 18px rgba(79,109,245,.35);
+  }
+  .node {
+    position: absolute; transform: translate(-50%, -50%);
+    width: 140px; padding: 10px 8px; border-radius: 18px;
+    background: var(--card); border: 3px solid var(--c);
+    font: inherit; color: var(--ink); cursor: pointer; text-align: center;
+    box-shadow: 0 3px 10px rgba(0,0,0,.08);
+    transition: transform .15s, box-shadow .15s, background .15s;
+  }
+  .node:hover { transform: translate(-50%, -50%) scale(1.06); }
+  .node.active { box-shadow: 0 0 0 5px color-mix(in srgb, var(--c) 30%, transparent); }
+  .node.done { background: color-mix(in srgb, var(--c) 15%, white); }
+  .node .emoji { font-size: 1.7rem; display: block; }
+  .node .step { font-size: .7rem; color: var(--soft); text-transform: uppercase; letter-spacing: .05em; }
+  .node .label { font-weight: bold; font-size: .9rem; display: block; }
+  .node .tick { display: none; position: absolute; top: -10px; right: -10px;
+    background: var(--good); color: #fff; border-radius: 50%; width: 26px; height: 26px;
+    line-height: 26px; font-size: .9rem; }
+  .node.done .tick { display: block; }
+
+  /* Writing panel */
+  #panel {
+    background: var(--card); border-radius: 20px; padding: 20px;
+    border-top: 8px solid var(--c, #4f6df5);
+    box-shadow: 0 4px 16px rgba(0,0,0,.07); margin-bottom: 20px;
+  }
+  #panel h2 { margin: 0 0 4px; font-size: 1.4rem; }
+  #question { font-size: 1.1rem; margin: 0 0 14px; }
+  .box-title { font-weight: bold; font-size: .85rem; color: var(--soft);
+    text-transform: uppercase; letter-spacing: .05em; margin: 12px 0 6px; }
+  #hints { margin: 0; padding-left: 22px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    font: inherit; font-size: .9rem; cursor: pointer;
+    border: 2px solid var(--c, #4f6df5); background: #fff; color: var(--ink);
+    border-radius: 999px; padding: 5px 12px;
+  }
+  .chip:hover { background: color-mix(in srgb, var(--c, #4f6df5) 15%, white); }
+  .chip.word { border-style: dashed; }
+  textarea {
+    width: 100%; min-height: 110px; margin-top: 14px; padding: 12px;
+    font: inherit; font-size: 1.05rem; border-radius: 12px;
+    border: 2px solid #d5d9e4; resize: vertical;
+  }
+  textarea:focus { outline: none; border-color: var(--c, #4f6df5); }
+  #sectionCount { color: var(--soft); font-size: .9rem; margin-top: 4px; }
+  .nav { display: flex; justify-content: space-between; margin-top: 12px; }
+
+  /* Buttons */
+  .btn {
+    font: inherit; font-weight: bold; cursor: pointer; border: none;
+    border-radius: 12px; padding: 10px 18px; background: #4f6df5; color: #fff;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn.light { background: #e4e8f3; color: var(--ink); }
+  .btn:disabled { opacity: .4; cursor: default; }
+
+  /* Word counter */
+  #counter { background: var(--card); border-radius: 16px; padding: 14px 18px;
+    box-shadow: 0 3px 10px rgba(0,0,0,.06); margin-bottom: 16px; }
+  #counterText { font-weight: bold; }
+  #bar { height: 16px; background: #e4e8f3; border-radius: 999px; overflow: hidden; margin-top: 8px; position: relative; }
+  #fill { height: 100%; width: 0; border-radius: 999px; transition: width .3s, background .3s; }
+  #minMark { position: absolute; top: 0; bottom: 0; width: 3px; background: var(--ink); opacity: .35; }
+  .actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+
+  /* Finished essay */
+  #output { background: #fffdf5; border: 2px solid #f0e2b6; border-radius: 20px; padding: 24px; }
+  #output h2 { text-align: center; margin-top: 0; }
+  #essayText { font-size: 1.15rem; line-height: 1.8; }
+
+  @media (max-width: 640px) {
+    #map { height: 520px; }
+    .node { width: 104px; padding: 6px; }
+    .node .label { font-size: .78rem; }
+    .node .emoji { font-size: 1.3rem; }
+    #centre { width: 110px; height: 110px; font-size: .95rem; }
+  }
+  @media print {
+    body { background: #fff; }
+    #app > *:not(#output) { display: none !important; }
+    #output { border: none; }
+    #output .actions { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1 id="title"></h1>
+    <p id="instructions"></p>
+  </header>
+
+  <div id="map">
+    <svg id="lines" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+    <div id="centre"></div>
+  </div>
+
+  <section id="panel" hidden>
+    <h2 id="panelTitle"></h2>
+    <p id="question"></p>
+    <div class="box-title">Remember…</div>
+    <ul id="hints"></ul>
+    <div class="box-title">Sentence starters (click to add)</div>
+    <div class="chips" id="starters"></div>
+    <div class="box-title">Word bank (click to add)</div>
+    <div class="chips" id="words"></div>
+    <textarea id="answer" placeholder="Write your sentences here…"></textarea>
+    <div id="sectionCount"></div>
+    <div class="nav">
+      <button class="btn light" id="prevBtn">← Back</button>
+      <button class="btn" id="nextBtn">Next →</button>
+    </div>
+  </section>
+
+  <div id="counter">
+    <div id="counterText"></div>
+    <div id="bar"><div id="fill"></div><div id="minMark"></div></div>
+  </div>
+
+  <div class="actions">
+    <button class="btn" id="assembleBtn">📝 Put my essay together</button>
+    <button class="btn light" id="resetBtn">Start again</button>
+  </div>
+
+  <section id="output" hidden>
+    <h2 id="essayTitle"></h2>
+    <div id="essayText"></div>
+    <div class="actions" style="margin-top:20px">
+      <button class="btn" id="copyBtn">Copy essay</button>
+      <button class="btn light" id="printBtn">Print</button>
+    </div>
+  </section>
+</div>
+
+<script>
+  const S = ESSAY.sections;
+  const COLOURS = ["#f4a259", "#5bc0eb", "#43aa8b", "#f9c74f", "#e56b6f", "#9b5de5", "#00b4d8", "#90be6d"];
+  const KEY = "essay-planner-" + ESSAY.title;
+  let answers = {};
+  try { answers = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) {}
+  let current = null;
+
+  const $ = id => document.getElementById(id);
+  const countWords = t => (t.trim().match(/\S+/g) || []).length;
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(answers)); } catch (e) {} };
+
+  // Titles
+  $("title").textContent = ESSAY.title;
+  $("instructions").textContent = ESSAY.instructions;
+  $("centre").textContent = ESSAY.centre;
+  $("minMark").style.left = (ESSAY.minWords / ESSAY.maxWords * 100) + "%";
+
+  // Build mind map
+  const nodes = [];
+  S.forEach((s, i) => {
+    const angle = (-90 + i * 360 / S.length) * Math.PI / 180;
+    const x = 50 + 38 * Math.cos(angle);
+    const y = 50 + 38 * Math.sin(angle);
+    const colour = COLOURS[i % COLOURS.length];
+
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", 50); line.setAttribute("y1", 50);
+    line.setAttribute("x2", x);  line.setAttribute("y2", y);
+    $("lines").appendChild(line);
+
+    const b = document.createElement("button");
+    b.className = "node";
+    b.style.left = x + "%";
+    b.style.top = y + "%";
+    b.style.setProperty("--c", colour);
+    b.innerHTML = '<span class="tick">✓</span><span class="emoji"></span><span class="step"></span><span class="label"></span>';
+    b.querySelector(".emoji").textContent = s.emoji || "💭";
+    b.querySelector(".step").textContent = "Step " + (i + 1);
+    b.querySelector(".label").textContent = s.label;
+    b.onclick = () => openSection(i);
+    $("map").appendChild(b);
+    nodes.push(b);
+  });
+
+  function openSection(i) {
+    current = i;
+    const s = S[i];
+    const colour = COLOURS[i % COLOURS.length];
+    const panel = $("panel");
+    panel.hidden = false;
+    panel.style.setProperty("--c", colour);
+    $("panelTitle").textContent = (s.emoji || "") + " Step " + (i + 1) + ": " + s.label;
+    $("question").textContent = s.question;
+
+    $("hints").innerHTML = "";
+    (s.hints || []).forEach(h => {
+      const li = document.createElement("li"); li.textContent = h; $("hints").appendChild(li);
+    });
+
+    makeChips("starters", s.starters || [], true);
+    makeChips("words", s.words || [], false);
+
+    $("answer").value = answers[s.id] || "";
+    $("prevBtn").disabled = i === 0;
+    $("nextBtn").textContent = i === S.length - 1 ? "Finish ✓" : "Next →";
+    nodes.forEach((n, j) => n.classList.toggle("active", j === i));
+    updateCounts();
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    $("answer").focus();
+  }
+
+  function makeChips(id, list, isStarter) {
+    const box = $(id);
+    box.innerHTML = "";
+    list.forEach(t => {
+      const c = document.createElement("button");
+      c.className = "chip" + (isStarter ? "" : " word");
+      c.textContent = isStarter ? t + "…" : t;
+      c.onclick = () => insertText(isStarter ? t + " " : t + " ");
+      box.appendChild(c);
+    });
+  }
+
+  function insertText(text) {
+    const ta = $("answer");
+    const start = ta.selectionStart, end = ta.selectionEnd;
+    const before = ta.value.slice(0, start);
+    const spacer = before && !/\s$/.test(before) ? " " : "";
+    ta.value = before + spacer + text + ta.value.slice(end);
+    const pos = start + spacer.length + text.length;
+    ta.focus();
+    ta.setSelectionRange(pos, pos);
+    ta.dispatchEvent(new Event("input"));
+  }
+
+  $("answer").addEventListener("input", () => {
+    if (current === null) return;
+    answers[S[current].id] = $("answer").value;
+    save();
+    updateCounts();
+  });
+
+  function updateCounts() {
+    let total = 0;
+    S.forEach((s, i) => {
+      const n = countWords(answers[s.id] || "");
+      total += n;
+      nodes[i].classList.toggle("done", n > 0);
+    });
+    if (current !== null) {
+      const n = countWords(answers[S[current].id] || "");
+      $("sectionCount").textContent = n + (n === 1 ? " word" : " words") + " in this part";
+    }
+    const min = ESSAY.minWords, max = ESSAY.maxWords;
+    let colour, msg;
+    if (total < min) {
+      colour = "var(--warn)";
+      msg = "Keep going! You need about " + (min - total) + " more words.";
+    } else if (total <= max) {
+      colour = "var(--good)";
+      msg = "Great job! Your essay is the right length. 🎉";
+    } else {
+      colour = "var(--bad)";
+      msg = "A little too long. Try taking out about " + (total - max) + " words.";
+    }
+    $("counterText").textContent = "Total: " + total + " words (aim for " + min + "–" + max + "). " + msg;
+    $("fill").style.width = Math.min(total / max, 1) * 100 + "%";
+    $("fill").style.background = colour;
+  }
+
+  $("prevBtn").onclick = () => { if (current > 0) openSection(current - 1); };
+  $("nextBtn").onclick = () => {
+    if (current < S.length - 1) openSection(current + 1);
+    else $("assembleBtn").click();
+  };
+
+  function buildEssay() {
+    return S.map(s => (answers[s.id] || "").trim())
+      .filter(Boolean)
+      .map(p => /[.!?]["']?$/.test(p) ? p : p + ".")
+      .join(" ");
+  }
+
+  $("assembleBtn").onclick = () => {
+    const text = buildEssay();
+    if (!text) { alert("Write something in at least one bubble first!"); return; }
+    $("essayTitle").textContent = ESSAY.title;
+    $("essayText").textContent = text;
+    $("output").hidden = false;
+    $("output").scrollIntoView({ behavior: "smooth" });
+  };
+
+  $("copyBtn").onclick = () => {
+    const full = ESSAY.title + "\n\n" + buildEssay();
+    const done = () => { $("copyBtn").textContent = "Copied! ✓"; setTimeout(() => $("copyBtn").textContent = "Copy essay", 2000); };
+    if (navigator.clipboard) navigator.clipboard.writeText(full).then(done, () => alert("Couldn't copy. Try selecting the text instead."));
+    else alert("Couldn't copy. Try selecting the text instead.");
+  };
+
+  $("printBtn").onclick = () => window.print();
+
+  $("resetBtn").onclick = () => {
+    if (!confirm("Clear everything and start again?")) return;
+    answers = {};
+    save();
+    $("answer").value = "";
+    $("output").hidden = true;
+    updateCounts();
+  };
+
+  updateCounts();
+</script>
+</body>
+</html>
